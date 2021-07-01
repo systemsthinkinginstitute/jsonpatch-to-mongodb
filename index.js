@@ -2,13 +2,42 @@ function toDot(path) {
   return path.replace(/^\//, '').replace(/\//g, '.').replace(/~1/g, '/').replace(/~0/g, '~');
 }
 
+let idx = 0;
+
+function translatePath(path, arrayFilters) {
+  const parts = path.split('/');
+  parts.shift();
+  let collected = [];
+
+  for (const part of parts) {
+    if (!part.match(/^\[/)) {
+      collected.push(part);
+    } else {
+      const id = part.match(/^\[(.+)\]$/)[1];
+      //identifiers must start with a lowercase letter
+      const filterIdentifier = `a${idx}`;
+      const newPart = `$[${filterIdentifier}]`
+      collected.push(newPart);
+      const filterKey = `${filterIdentifier}.id`;
+      const filter = { [filterKey]: id };
+      arrayFilters.add(filter);
+      idx++;
+    }
+  }
+  return collected.join('/');
+}
+
 module.exports = function(patches){
+  idx = 0;
   var update = {};
+  const arrayFilters = new Set();
   patches.map(function(p){
+    p.path = translatePath(p.path, arrayFilters);
+
     switch(p.op) {
     case 'add':
-      var path = toDot(p.path),
-        parts = path.split('.');
+      const path = toDot(p.path);
+      const parts = path.split('.');
 
       var positionPart = parts.length > 1 && parts[parts.length - 1];
       var addToEnd = positionPart === '-';
@@ -67,5 +96,5 @@ module.exports = function(patches){
       throw new Error('Unsupported Operation! op = ' + p.op);
     }
   });
-  return update;
+  return { update, arrayFilters: Array.from(arrayFilters) };
 };
