@@ -40,9 +40,14 @@ module.exports = function(patches){
       const parts = path.split('.');
 
       var positionPart = parts.length > 1 && parts[parts.length - 1];
+
       var addToEnd = positionPart === '-';
       var key = parts.slice(0, -1).join('.');
       var $position = positionPart && parseInt(positionPart, 10) || null;
+
+      if (parseInt(positionPart) == 0) {
+        $position = 0;
+      }
 
       if ($position !== null) {
         update.$push = update.$push || {};
