@@ -30,9 +30,18 @@ function translatePath(path, arrayFilters) {
 module.exports = function(patches){
   idx = 0;
   var update = {};
+  const unsetUpdate = {};
+
+  const unsetArrayFilters = new Set();
+
   const arrayFilters = new Set();
+
   patches.map(function(p){
-    p.path = translatePath(p.path, arrayFilters);
+    if (p.op == 'remove') {
+      p.path = translatePath(p.path, unsetArrayFilters);
+    } else {
+      p.path = translatePath(p.path, arrayFilters);
+    }
 
     switch(p.op) {
     case 'add':
@@ -88,8 +97,8 @@ module.exports = function(patches){
       }
       break;
     case 'remove':
-      update.$unset = update.$unset || {};
-      update.$unset[toDot(p.path)] = 1;
+      unsetUpdate.$unset = unsetUpdate.$unset || {};
+      unsetUpdate.$unset[toDot(p.path)] = 1;
       break;
     case 'replace':
       update.$set = update.$set || {};
@@ -101,5 +110,6 @@ module.exports = function(patches){
       throw new Error('Unsupported Operation! op = ' + p.op);
     }
   });
-  return { update, arrayFilters: Array.from(arrayFilters) };
+
+  return { update, unsetUpdate, arrayFilters: Array.from(arrayFilters), unsetArrayFilters: Array.from(unsetArrayFilters) };
 };
